@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GAV Estoque Inteligente</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.ico" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { brand: '#0d3b66' } } } }
+  </script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <header class="bg-brand text-white py-5 shadow-md">
+    <div class="max-w-6xl mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">📦 GAV Resorts • Controle de Estoque</h1>
+      <span class="text-sm opacity-70">PWA Dinâmico</span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <div class="bg-white p-6 rounded-xl shadow-lg">
+      <h2 class="text-xl font-semibold mb-4">Novo Produto</h2>
+      <form id="form" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <input id="nome" type="text" placeholder="Nome do produto" class="col-span-2 p-3 border rounded-md" required />
+        <input id="quantidade" type="number" placeholder="Quantidade" class="p-3 border rounded-md" required />
+        <button type="submit" class="bg-brand text-white p-3 rounded-md hover:bg-blue-900 transition">Salvar</button>
+      </form>
+
+      <h2 class="text-xl font-semibold mb-4">Estoque Atual</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+          <thead>
+            <tr class="bg-gray-200 text-left">
+              <th class="py-2 px-4">Produto</th>
+              <th class="py-2 px-4">Quantidade</th>
+              <th class="py-2 px-4">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBtHsMyqpfsxBtjKhIfsdob3KPSqUuNW8I",
+      authDomain: "estoque1-c5809.firebaseapp.com",
+      databaseURL: "https://estoque1-c5809-default-rtdb.firebaseio.com",
+      projectId: "estoque1-c5809",
+      storageBucket: "estoque1-c5809.firebasestorage.app",
+      messagingSenderId: "336482475976",
+      appId: "1:336482475976:web:6dad267532360b718b2afd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const produtosRef = ref(db, 'produtos');
+
+    const form = document.getElementById('form');
+    const tabela = document.getElementById('tabela');
+    let editandoId = null;
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value.trim();
+      const quantidade = parseInt(document.getElementById('quantidade').value);
+      if (!nome || isNaN(quantidade)) return;
+
+      if (editandoId) {
+        set(ref(db, `produtos/${editandoId}`), { nome, quantidade });
+        editandoId = null;
+      } else {
+        push(produtosRef, { nome, quantidade });
+      }
+
+      form.reset();
+    });
+
+    onValue(produtosRef, (snapshot) => {
+      tabela.innerHTML = '';
+      snapshot.forEach(child => {
+        const id = child.key;
+        const { nome, quantidade } = child.val();
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class='py-2 px-4'>${nome}</td>
+          <td class='py-2 px-4'>${quantidade}</td>
+          <td class='py-2 px-4 space-x-2'>
+            <button onclick="editar('${id}', '${nome}', ${quantidade})" class='bg-yellow-400 text-black px-3 py-1 rounded-md hover:bg-yellow-500 transition'>✏️ Editar</button>
+            <button onclick="remover('${id}')" class='bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition'>🗑️ Excluir</button>
+          </td>
+        `;
+        tabela.appendChild(row);
+      });
+    });
+
+    window.editar = (id, nome, quantidade) => {
+      document.getElementById('nome').value = nome;
+      document.getElementById('quantidade').value = quantidade;
+      editandoId = id;
+    }
+
+    window.remover = (id) => {
+      remove(ref(db, `produtos/${id}`));
+    }
+  </script>
+</body>
+</html>
